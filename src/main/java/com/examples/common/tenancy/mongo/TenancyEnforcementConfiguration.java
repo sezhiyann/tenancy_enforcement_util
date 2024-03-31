@@ -1,12 +1,14 @@
 package com.examples.common.tenancy.mongo;
 
+import com.examples.common.tenancy.TenantContextUtil;
+import com.examples.common.tenancy.TenantEnforcementException;
 import com.examples.common.tenancy.TenantIdHolder;
-import com.examples.common.tenancy.TenantUtil;
 import com.mongodb.client.MongoClient;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +22,6 @@ public class TenancyEnforcementConfiguration {
 
   //TODO: Can we pick this up from somewhere? for now this is reasonable limit.
   public static final String BASE_PACKAGE = "com.examples";
-  private ApplicationContext applicationContext;
 
   //mandatory to have this name, else apps will fail.
   @Bean(name = "mongoTemplate")
@@ -30,7 +31,8 @@ public class TenancyEnforcementConfiguration {
   }
 
   @PostConstruct
-  void gatherTenantFieldInformation() throws Exception {
+  void gatherTenantFieldInformation()
+      throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
 
     ClassPathScanningCandidateComponentProvider componentProvider = new ClassPathScanningCandidateComponentProvider(
         false);
@@ -46,7 +48,7 @@ public class TenancyEnforcementConfiguration {
       Document annotation = aClass.getAnnotation(Document.class);
       String collectionName = annotation.collection();
 
-      TenantUtil.setTenancyEnabled(collectionName, tenancyEnabled);
+      TenantContextUtil.setTenancyEnabled(collectionName, tenancyEnabled);
 
       if (!tenancyEnabled) {
         continue;
@@ -54,17 +56,20 @@ public class TenancyEnforcementConfiguration {
 
       Constructor<?> defaultConstructor = aClass.getDeclaredConstructor();
       if (defaultConstructor == null) {
-        throw new RuntimeException(
+        throw new TenantEnforcementException(
             "Entities holding tenant specific data are required to have default constructors :"
                 + clazzName);
       }
 
       TenantIdHolder tenantIdHolder = (TenantIdHolder) defaultConstructor.newInstance(null);
       String tenantIdFieldName = tenantIdHolder.getTenantIdFieldName();
-      TenantUtil.setTenantField(collectionName, tenantIdFieldName);
+      TenantContextUtil.setTenantField(collectionName, tenantIdFieldName);
 
     }
   }
 
-
+  @PreDestroy
+  void onShutdown() {
+    TenantContextUtil.unSet();
+  }
 }

@@ -4,6 +4,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface EntityWithCompanyRepository extends MongoRepository<EntityWithCompany, String> {
+public interface EntityWithTenantAndContextRepository extends
+    MongoRepository<EntityWithTenantAndContext, String> {
 
 }

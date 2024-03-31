@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 
 @Import(IntegrationTestConfiguration.class)
 @SpringBootTest
-public class AbstractIntegrationTest {
+public abstract class AbstractIntegrationTest {
 
   @Autowired
   @Qualifier("defaultMongoTemplate")
