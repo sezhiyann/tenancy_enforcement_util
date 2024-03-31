@@ -1,0 +1,5 @@
+logging.level.org.springframework.data.mongodb.core: DEBUG
+
+testcontainers.enabled: true
+
+spring.data.mongodb.uri: mongodb://localhost:${MONGODB_PORT:27017}/${MONGODB_DATABASE:tenancy_test}
