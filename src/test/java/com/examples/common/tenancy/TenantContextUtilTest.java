@@ -53,11 +53,63 @@ class TenantContextUtilTest {
     assertThrows(RuntimeException.class, () -> TenantContextUtil.getTenantField("test"));
   }
 
-
   @Test
   void setTenancyEnabled() {
     TenantContextUtil.setTenancyEnabled("test", true);
     assertTrue(TenantContextUtil.isTenancyEnabled("test"), "Not returning true");
+  }
+
+  @Test
+  void setAdditionalContextId() {
+    TenantContextUtil.setAdditionalContextId("1");
+    assertEquals("1", TenantContextUtil.getAdditionalContextId());
+  }
+
+  @Test
+  void getAdditionalContextId_returns_value() {
+    TenantContextUtil.setAdditionalContextId("1");
+    assertEquals("1", TenantContextUtil.getAdditionalContextId());
+  }
+
+  @Test
+  void getAdditionalContextId_not_exists() {
+    TenantContextUtil.setAdditionalContextId(null);
+    assertThrows(RuntimeException.class, () -> TenantContextUtil.getAdditionalContextId());
+  }
+
+  @Test
+  void setAdditionalContextField_returns_value() {
+    TenantContextUtil.setAdditionalContextField("test", "testfield");
+    assertEquals("testfield", TenantContextUtil.getAdditionalContextField("test"));
+  }
+
+  @Test
+  void setAdditionalContextField_empty_collection() {
+    assertThrows(RuntimeException.class,
+        () -> TenantContextUtil.setAdditionalContextField(null, "testfield"));
+  }
+
+  @Test
+  void setAdditionalContextField_empty_field() {
+    assertThrows(RuntimeException.class,
+        () -> TenantContextUtil.setAdditionalContextField("test", null));
+  }
+
+  @Test
+  void setAdditionalContextField() {
+    TenantContextUtil.setAdditionalContextField("test", "testfield");
+    assertEquals("testfield", TenantContextUtil.getAdditionalContextField("test"));
+  }
+
+  @Test
+  void getAdditionalContextField_empty() {
+    assertThrows(RuntimeException.class, () -> TenantContextUtil.getAdditionalContextField("test"));
+  }
+
+  @Test
+  void setAdditionalContextEnabled() {
+    TenantContextUtil.setAdditionalContextEnabled("test", true);
+    assertTrue(TenantContextUtil.isAdditionalContextEnabled("test"), "Not returning true");
   }
 
 }

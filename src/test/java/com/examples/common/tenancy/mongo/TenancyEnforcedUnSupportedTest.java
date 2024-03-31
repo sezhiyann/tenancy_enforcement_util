@@ -10,7 +10,7 @@ import org.mockito.Mockito;
 import org.springframework.dao.support.PersistenceExceptionTranslator;
 import org.springframework.data.mongodb.core.MongoDatabaseFactorySupport;
 
-class TenancyEnforcedMongoTemplateTest {
+class TenancyEnforcedUnSupportedTest {
 
   static TenancyEnforcedMongoTemplate tenancyEnforcedMongoTemplate;
 

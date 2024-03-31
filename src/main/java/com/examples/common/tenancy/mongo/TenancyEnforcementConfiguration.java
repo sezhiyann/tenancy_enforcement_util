@@ -1,5 +1,6 @@
 package com.examples.common.tenancy.mongo;
 
+import com.examples.common.tenancy.AdditionalContextIdHolder;
 import com.examples.common.tenancy.TenantContextUtil;
 import com.examples.common.tenancy.TenantEnforcementException;
 import com.examples.common.tenancy.TenantIdHolder;
@@ -8,6 +9,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
@@ -39,20 +41,19 @@ public class TenancyEnforcementConfiguration {
     componentProvider.addIncludeFilter(new AnnotationTypeFilter(Document.class));
 
     for (BeanDefinition candidate : componentProvider.findCandidateComponents(BASE_PACKAGE)) {
-      Class<?> aClass = ClassUtils.forName(candidate.getBeanClassName(),
+      String clazzName = Objects.requireNonNull(candidate.getBeanClassName());
+      Class<?> aClass = ClassUtils.forName(clazzName,
           TenancyEnforcementConfiguration.class.getClassLoader());
 
-      String clazzName = aClass.getName();
       boolean tenancyEnabled = TenantIdHolder.class.isAssignableFrom(aClass);
+
+      boolean additionalContextEnabled = AdditionalContextIdHolder.class.isAssignableFrom(aClass);
 
       Document annotation = aClass.getAnnotation(Document.class);
       String collectionName = annotation.collection();
 
       TenantContextUtil.setTenancyEnabled(collectionName, tenancyEnabled);
-
-      if (!tenancyEnabled) {
-        continue;
-      }
+      TenantContextUtil.setAdditionalContextEnabled(collectionName, additionalContextEnabled);
 
       Constructor<?> defaultConstructor = aClass.getDeclaredConstructor();
       if (defaultConstructor == null) {
@@ -61,10 +62,18 @@ public class TenancyEnforcementConfiguration {
                 + clazzName);
       }
 
-      TenantIdHolder tenantIdHolder = (TenantIdHolder) defaultConstructor.newInstance(null);
-      String tenantIdFieldName = tenantIdHolder.getTenantIdFieldName();
-      TenantContextUtil.setTenantField(collectionName, tenantIdFieldName);
+      if (tenancyEnabled) {
+        TenantIdHolder tenantIdHolder = (TenantIdHolder) defaultConstructor.newInstance(null);
+        String tenantIdFieldName = tenantIdHolder.getTenantIdFieldName();
+        TenantContextUtil.setTenantField(collectionName, tenantIdFieldName);
+      }
 
+      if (additionalContextEnabled) {
+        AdditionalContextIdHolder additionalContextIdHolder = (AdditionalContextIdHolder) defaultConstructor.newInstance(
+            null);
+        String additionalContextIdFieldName = additionalContextIdHolder.getAdditionalContextIdFieldName();
+        TenantContextUtil.setAdditionalContextField(collectionName, additionalContextIdFieldName);
+      }
     }
   }
 

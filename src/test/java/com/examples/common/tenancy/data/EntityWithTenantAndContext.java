@@ -17,16 +17,14 @@ import org.springframework.data.mongodb.core.mapping.Field;
 public class EntityWithTenantAndContext extends BaseMongoEntity<String> implements
     AdditionalContextIdHolder {
 
-
   public static final String TENANT_ID = "tenant_id";
-  private static final String ADDITIONAL_CONTEXT_ID = "additional_context_id";
+  public static final String ADDITIONAL_CONTEXT_ID = "additional_context_id";
 
   @Field(TENANT_ID)
   private String tenantId;
 
   @Field(ADDITIONAL_CONTEXT_ID)
   private String additionalContextId;
-
 
   @Override
   public String getTenantIdFieldName() {

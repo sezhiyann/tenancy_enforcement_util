@@ -6,23 +6,16 @@ import org.springframework.util.StringUtils;
 
 public final class TenantContextUtil {
 
-  private TenantContextUtil() {
-  }
-
   private static final ThreadLocal<String> tenantIdPerRequest = new ThreadLocal<>();
   private static final Map<String, String> mapOfTenantFieldNames = new HashMap<>(0);
-
-  private static final Map<String, Boolean> mapOfTenancyEnabledCollections = new HashMap<>(0);
-
-
+  private static final Map<String, Boolean> mapOfTenancyEnabledCollections
+      = new HashMap<>(0);
   private static final ThreadLocal<String> contextIdPerRequest = new ThreadLocal<>();
   private static final Map<String, String> mapOfContextFieldNames = new HashMap<>(0);
+  private static final Map<String, Boolean> mapOfContextEnabledCollections
+      = new HashMap<>(0);
 
-  private static final Map<String, Boolean> mapOfAdditionalContextEnabledCollections = new HashMap<>(
-      0);
-
-  public static void setTenantId(String tenantId) {
-    tenantIdPerRequest.set(tenantId);
+  private TenantContextUtil() {
   }
 
   public static String getTenantId() {
@@ -32,6 +25,10 @@ public final class TenantContextUtil {
     }
     return tenantId;
 
+  }
+
+  public static void setTenantId(String tenantId) {
+    tenantIdPerRequest.set(tenantId);
   }
 
   public static void setTenantField(String collectionName, String tenantIdFieldName) {
@@ -54,7 +51,6 @@ public final class TenantContextUtil {
   public static String getTenantField(String collectionName) {
     String tenantIdFieldName = mapOfTenantFieldNames.get(collectionName);
     if (!StringUtils.hasText(tenantIdFieldName)) {
-
       throw new TenantEnforcementException(
           "Collection is not configured with tenant id field : " + collectionName);
     }
@@ -63,83 +59,76 @@ public final class TenantContextUtil {
 
 
   public static boolean isTenancyEnabled(String collectionName) {
-    Boolean b = mapOfTenancyEnabledCollections.get(collectionName);
-    if (b == null) {
-
+    Boolean tenancyEnabled = mapOfTenancyEnabledCollections.get(collectionName);
+    if (tenancyEnabled == null) {
       throw new TenantEnforcementException(
           "Clazz is not configured properly, not able to find if tenancy is enabled or not : "
               + collectionName);
     }
-    return b;
+    return tenancyEnabled;
   }
 
   public static void setTenancyEnabled(String collectionName, boolean tenancyEnabled) {
     if (!StringUtils.hasText(collectionName)) {
-
       throw new TenantEnforcementException("Clazz cannot be emtpy");
     }
     mapOfTenancyEnabledCollections.put(collectionName, tenancyEnabled);
   }
 
-
-  public static void setAdditionalContextId(String tenantId) {
-    contextIdPerRequest.set(tenantId);
-  }
-
   public static String getAdditionalContextId() {
-    String tenantId = contextIdPerRequest.get();
-    if (!StringUtils.hasText(tenantId)) {
-      throw new TenantEnforcementException("Tenant Id retrieved before initialization");
+    String additionalContextId = contextIdPerRequest.get();
+    if (!StringUtils.hasText(additionalContextId)) {
+      throw new TenantEnforcementException("Additional context id retrieved before initialization");
     }
-    return tenantId;
+    return additionalContextId;
 
   }
 
-  public static void setAdditionalContextField(String collectionName, String tenantIdFieldName) {
-    if (!StringUtils.hasText(collectionName)) {
+  public static void setAdditionalContextId(String additionalContextId) {
+    contextIdPerRequest.set(additionalContextId);
+  }
 
+  public static void setAdditionalContextField(String collectionName,
+      String additionalContextFieldName) {
+    if (!StringUtils.hasText(collectionName)) {
       throw new TenantEnforcementException("Collection Name cannot be null");
     }
 
-    if (!StringUtils.hasText(tenantIdFieldName)) {
-
+    if (!StringUtils.hasText(additionalContextFieldName)) {
       throw new TenantEnforcementException(
-          "Entities holding tenant specific data are required to return field names via getTenantIdFieldName :"
+          "Entities holding additional context data are required to return field names via getAdditionalContextFieldName :"
               + collectionName);
     }
 
     //also create a map with fields against collection names.
-    mapOfContextFieldNames.put(collectionName, tenantIdFieldName);
+    mapOfContextFieldNames.put(collectionName, additionalContextFieldName);
   }
 
   public static String getAdditionalContextField(String collectionName) {
-    String tenantIdFieldName = mapOfContextFieldNames.get(collectionName);
-    if (!StringUtils.hasText(tenantIdFieldName)) {
-
+    String additionalContextFieldName = mapOfContextFieldNames.get(collectionName);
+    if (!StringUtils.hasText(additionalContextFieldName)) {
       throw new TenantEnforcementException(
-          "Collection is not configured with tenant id field : " + collectionName);
+          "Collection is not configured with additional context id field : " + collectionName);
     }
-    return tenantIdFieldName;
+    return additionalContextFieldName;
   }
-
 
   public static boolean isAdditionalContextEnabled(String collectionName) {
-    Boolean b = mapOfAdditionalContextEnabledCollections.get(collectionName);
-    if (b == null) {
-
+    Boolean additionalContextEnabled = mapOfContextEnabledCollections.get(collectionName);
+    if (additionalContextEnabled == null) {
       throw new TenantEnforcementException(
-          "Clazz is not configured properly, not able to find if tenancy is enabled or not : "
+          "Clazz is not configured properly, not able to find if additional context is enabled or not : "
               + collectionName);
     }
-    return b;
+    return additionalContextEnabled;
   }
 
-  public static void setAdditionalContextEnabled(String collectionName, boolean tenancyEnabled) {
+  public static void setAdditionalContextEnabled(String collectionName,
+      boolean additionalContextEnabled) {
     if (!StringUtils.hasText(collectionName)) {
-
       throw new TenantEnforcementException("Clazz cannot be emtpy");
     }
-    mapOfAdditionalContextEnabledCollections.put(collectionName, tenancyEnabled);
+    mapOfContextEnabledCollections.put(collectionName, additionalContextEnabled);
   }
 
 

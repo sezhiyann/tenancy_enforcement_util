@@ -24,29 +24,31 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
-class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
+class EntityWithTenantIT extends AbstractIntegrationTest {
 
   public static final String TONE = "tone";
   public static final String TTWO = "ttwo";
   public static final String TONE_TEST_ID = "6606905a5cf50f20304f4850";
   public static final String TTWO_TEST_ID = "66069054c3da2e0c64152d55";
   public static final String TFOUR = "tfour";
-  public static final String TFIVE = "cfive";
+  public static final String TFIVE = "tfive";
   public static final String TONE_ID_FOR_REMOVE = "66069054c3da2e0c64152d10";
   public static final String TTWO_ID_FOR_REMOVE = "66069054c3da2e0c64152d11";
   public static final String TEST_TFOUR = "test_tfour";
-  public static final String TEST_TFIVE = "test_cfive";
+  public static final String TEST_TFIVE = "test_tfive";
   public static final String TEST_TONE = "test_tone";
+
+  public static final String TEST_TTWO = "test_ttwo";
   public static final String TEST_REPLACE = "test-replace";
   public static final String REPLACED_ENTITY = "replaced-entity";
-  public static final String TONE_ID_FOR_REPLACE = "66069054c3da2e0c64152d58";
+  public static final String TTWO_ID_FOR_REPLACE = "66069054c3da2e0c64152d58";
   public static final String TEST_STR = "test-";
 
-  public static final String TENANT_ID_FOR_REPLACE = "66069054c3da2e0c64152d57";
+  public static final String TONE_ID_FOR_REPLACE = "66069054c3da2e0c64152d57";
   public static final String NAME_UPDATED_1 = "name-updated-1";
   public static final String NAME_UPDATED = "name-updated";
 
-  public static final String TEST_TTWO = "test_ttwo";
+  public static final String TENANT_CHECK = "tenant-check";
 
   @Autowired
   @Qualifier("mongoTemplate")
@@ -56,23 +58,19 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
   void count_ForCurrentTenantId() {
     TenantContextUtil.setTenantId(TONE);
 
-    Query query = Query.query(Criteria.where(ID).is(TONE_TEST_ID));
+    Query query = Query.query(Criteria.where(NAME).is(TENANT_CHECK));
     long count = tenancyEnforcedMongoTemplate.count(
         query, EntityWithTenant.class);
-
-    List<EntityWithTenant> all = defaultMongoTemplate.findAll(EntityWithTenant.class);
-
     assertEquals(1, count, "Count not correct for current tenant");
   }
 
   @Test
   void count_ForAnotherTenantId() {
     TenantContextUtil.setTenantId(TONE);
+    Query query = Query.query(Criteria.where(CODE).is(TEST_TTWO));
+    long count = tenancyEnforcedMongoTemplate.count(query, EntityWithTenant.class);
 
-    long count = tenancyEnforcedMongoTemplate.count(
-        Query.query(Criteria.where(ID).is(TTWO_TEST_ID)), EntityWithTenant.class);
-
-    assertEquals(0, count, "Count came correct for another tenant");
+    assertEquals(0, count, "Able to Count correct for another tenant");
   }
 
   @Test
@@ -80,7 +78,7 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
     TenantContextUtil.setTenantId(TONE);
 
     long count = tenancyEnforcedMongoTemplate.exactCount(
-        Query.query(Criteria.where(ID).is(TONE_TEST_ID)), EntityWithTenant.class);
+        Query.query(Criteria.where(NAME).is(TENANT_CHECK)), EntityWithTenant.class);
 
     assertEquals(1, count, "Count not correct for current tenant");
   }
@@ -90,7 +88,7 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
     TenantContextUtil.setTenantId(TONE);
 
     long count = tenancyEnforcedMongoTemplate.exactCount(
-        Query.query(Criteria.where(ID).is(TTWO_TEST_ID)), EntityWithTenant.class);
+        Query.query(Criteria.where(CODE).is(TEST_TTWO)), EntityWithTenant.class);
 
     assertEquals(0, count, "Count came correct for another tenant");
   }
@@ -103,6 +101,7 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
         EntityWithTenant.class);
 
     assertNotNull(byId, "Entity not found for the current tenant");
+    assertEquals(byId.getTenantId(), TONE, "Tenant id not matching");
   }
 
   @Test
@@ -177,11 +176,11 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
     EntityWithTenant toReplace = EntityWithTenant.builder().name(REPLACED_ENTITY)
         .code(TEST_TONE).build();
     tenancyEnforcedMongoTemplate.findAndReplace(
-        Query.query(Criteria.where(ID).is(TENANT_ID_FOR_REPLACE)),
+        Query.query(Criteria.where(ID).is(TONE_ID_FOR_REPLACE)),
 
         toReplace);
 
-    EntityWithTenant entityWithTenant = defaultMongoTemplate.findById(TENANT_ID_FOR_REPLACE,
+    EntityWithTenant entityWithTenant = defaultMongoTemplate.findById(TONE_ID_FOR_REPLACE,
         EntityWithTenant.class);
     assertEquals(REPLACED_ENTITY, entityWithTenant.getName(),
         "name not updated for the current tenant");
@@ -193,17 +192,23 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
   void findAndReplace_forAnotherTenantId() {
     TenantContextUtil.setTenantId(TONE);
 
-    EntityWithTenant toReplace = EntityWithTenant.builder().name(REPLACED_ENTITY)
-        .code(TEST_TONE).build();
-    tenancyEnforcedMongoTemplate.findAndReplace(
-        Query.query(Criteria.where(ID).is(TONE_ID_FOR_REPLACE)),
+    EntityWithTenant toReplace = EntityWithTenant.builder()
+        .name(REPLACED_ENTITY)
+        .code(TEST_TONE)
+        .tenantId(TONE)
+        .build();
+    EntityWithTenant replaced
+        = tenancyEnforcedMongoTemplate.findAndReplace(
+        Query.query(Criteria.where(ID).is(TTWO_ID_FOR_REPLACE)),
         toReplace);
 
-    EntityWithTenant entityWithTenant = defaultMongoTemplate.findById(TONE_ID_FOR_REPLACE,
+    assertNull(replaced, "able to update for another tenant");
+
+    EntityWithTenant entityWithTenant = defaultMongoTemplate.findById(TTWO_ID_FOR_REPLACE,
         EntityWithTenant.class);
     assertEquals(TEST_REPLACE, entityWithTenant.getName(),
         "Able to update name for another tenant");
-    assertEquals(TTWO, entityWithTenant.getTenantId(),
+    assertNotEquals(TONE, entityWithTenant.getTenantId(),
         "Able to update tenant id for another tenant");
   }
 
@@ -254,7 +259,7 @@ class TenancyEnforcedMongoTemplateIT extends AbstractIntegrationTest {
 
     assertFalse(entityWithCompanies.stream().anyMatch(
             entityWithTenant -> TONE_TEST_ID.equals(entityWithTenant.getId())),
-        "Not able to fetch current tenant's data");
+        "Able to fetch another tenant's data");
   }
 
   @Test

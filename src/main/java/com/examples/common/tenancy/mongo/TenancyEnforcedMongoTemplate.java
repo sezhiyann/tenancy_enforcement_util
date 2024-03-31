@@ -1,5 +1,6 @@
 package com.examples.common.tenancy.mongo;
 
+import com.examples.common.tenancy.AdditionalContextIdHolder;
 import com.examples.common.tenancy.TenantContextUtil;
 import com.examples.common.tenancy.TenantEnforcementException;
 import com.examples.common.tenancy.TenantIdHolder;
@@ -10,6 +11,7 @@ import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 import lombok.NonNull;
@@ -48,7 +50,8 @@ public class TenancyEnforcedMongoTemplate extends MongoTemplate {
 
   @Override
   public <T> Stream<T> stream(Query query, Class<T> entityType, String collectionName) {
-    return super.stream(setTenantIdRestriction(entityType, query), entityType, collectionName);
+    return super.stream(enforceTenancy(entityType, query), entityType,
+        collectionName);
   }
 
   @Override
@@ -56,96 +59,104 @@ public class TenancyEnforcedMongoTemplate extends MongoTemplate {
       CollectionPreparer<MongoCollection<Document>> collectionPreparer,
       Document query, Document fields, Class<T> entityClass) {
     return super.doFindOne(collectionName, collectionPreparer,
-        setTenantIdRestriction(collectionName, query), fields, entityClass);
+        enforceTenancy(collectionName, query), fields, entityClass);
   }
 
   @Override
   public void executeQuery(Query query, String collectionName, DocumentCallbackHandler dch) {
-    super.executeQuery(setTenantIdRestriction(collectionName, query), collectionName, dch);
+    super.executeQuery(enforceTenancy(collectionName, query), collectionName,
+        dch);
   }
 
   @Override
   public <T> T findOne(Query query, Class<T> entityClass, String collectionName) {
-    return super.findOne(setTenantIdRestriction(entityClass, query), entityClass, collectionName);
+    return super.findOne(enforceTenancy(entityClass, query), entityClass,
+        collectionName);
   }
 
   @Override
   public boolean exists(Query query, @Nullable Class<?> entityClass, String collectionName) {
-    return super.exists(setTenantIdRestriction(collectionName, query), entityClass, collectionName);
+    return super.exists(enforceTenancy(collectionName, query), entityClass,
+        collectionName);
   }
 
   @Override
   public <T> List<T> find(Query query, Class<T> entityClass, String collectionName) {
-    return super.find(setTenantIdRestriction(entityClass, query), entityClass, collectionName);
+    return super.find(enforceTenancy(entityClass, query), entityClass,
+        collectionName);
   }
 
   @Override
   public <T> List<T> findDistinct(Query query, String field, String collectionName,
       Class<?> entityClass, Class<T> resultClass) {
-    return super.findDistinct(setTenantIdRestriction(collectionName, query), field, collectionName,
+    return super.findDistinct(enforceTenancy(collectionName, query), field,
+        collectionName,
         entityClass, resultClass);
   }
 
   @Override
   public <T> T findAndModify(Query query, UpdateDefinition update, FindAndModifyOptions options,
       Class<T> entityClass, String collectionName) {
-    return super.findAndModify(setTenantIdRestriction(collectionName, query), update, options,
+    return super.findAndModify(enforceTenancy(collectionName, query), update,
+        options,
         entityClass, collectionName);
   }
 
   @Override
   public <S, T> T findAndReplace(Query query, @NonNull S replacement, FindAndReplaceOptions options,
       Class<S> entityType, String collectionName, Class<T> resultType) {
-    return super.findAndReplace(setTenantIdRestriction(collectionName, query),
-        setTenantIdRestriction(replacement), options,
+    return super.findAndReplace(enforceTenancy(collectionName, query),
+        enforceTenancy(replacement), options,
         entityType, collectionName, resultType);
   }
 
   @Override
   protected <T> List<T> doFindAndDelete(String collectionName, Query query, Class<T> entityClass) {
-    return super.doFindAndDelete(collectionName, setTenantIdRestriction(collectionName, query),
+    return super.doFindAndDelete(collectionName,
+        enforceTenancy(collectionName, query),
         entityClass);
   }
 
   @Override
   public long count(Query query, @Nullable Class<?> entityClass, String collectionName) {
-    return super.count(setTenantIdRestriction(collectionName, query), entityClass, collectionName);
+    return super.count(enforceTenancy(collectionName, query), entityClass,
+        collectionName);
   }
 
   @Override
   public long exactCount(Query query, @Nullable Class<?> entityClass, String collectionName) {
-    return super.exactCount(setTenantIdRestriction(collectionName, query), entityClass,
+    return super.exactCount(enforceTenancy(collectionName, query), entityClass,
         collectionName);
   }
 
   @Override
   protected <T> Collection<T> doInsertBatch(String collectionName,
       Collection<? extends T> batchToSave, MongoWriter<T> writer) {
-    return super.doInsertBatch(collectionName, setTenantIdRestriction(batchToSave),
+    return super.doInsertBatch(collectionName, enforceTenancy(batchToSave),
         writer);
   }
 
   @Override
   public <T> T insert(@NonNull T objectToSave, String collectionName) {
-    return super.insert(setTenantIdRestriction(objectToSave), collectionName);
+    return super.insert(enforceTenancy(objectToSave), collectionName);
   }
 
   @Override
   public <T> T save(@NonNull T objectToSave, String collectionName) {
-    T objectWithTenantId = setTenantIdRestriction(objectToSave);
-    return super.save(objectWithTenantId, collectionName);
+    return super.save(enforceTenancy(objectToSave), collectionName);
   }
 
   @Override
   public <T> Window<T> scroll(Query query, Class<T> entityType, String collectionName) {
-    return super.scroll(setTenantIdRestriction(collectionName, query), entityType, collectionName);
+    return super.scroll(enforceTenancy(collectionName, query), entityType,
+        collectionName);
   }
 
   @Override
   protected UpdateResult doUpdate(String collectionName, Query query, UpdateDefinition update,
       @Nullable Class<?> entityClass, boolean upsert, boolean multi) {
-    Query modifiedQuery = setTenantIdRestriction(collectionName, query);
-    UpdateDefinition modifiedUpdate = setTenantIdRestriction(collectionName, update);
+    Query modifiedQuery = enforceTenancy(collectionName, query);
+    UpdateDefinition modifiedUpdate = enforceTenancy(collectionName, update);
     return super.doUpdate(collectionName, modifiedQuery, modifiedUpdate, entityClass, upsert,
         multi);
   }
@@ -154,13 +165,14 @@ public class TenancyEnforcedMongoTemplate extends MongoTemplate {
   protected <T> DeleteResult doRemove(String collectionName, Query query,
       @Nullable Class<T> entityClass,
       boolean multi) {
-    return super.doRemove(collectionName, setTenantIdRestriction(collectionName, query),
+    return super.doRemove(collectionName, enforceTenancy(collectionName, query),
         entityClass, multi);
   }
 
   @Override
   public <T> T findAndRemove(Query query, Class<T> entityClass, String collectionName) {
-    return super.findAndRemove(setTenantIdRestriction(collectionName, query), entityClass,
+    return super.findAndRemove(enforceTenancy(collectionName, query),
+        entityClass,
         collectionName);
   }
 
@@ -226,67 +238,95 @@ public class TenancyEnforcedMongoTemplate extends MongoTemplate {
     throw UNSUPPORTED_OPERATION_EXCEPTION;
   }
 
-  private UpdateDefinition setTenantIdRestriction(String collectionName, UpdateDefinition update) {
-    setTenantIdRestriction(collectionName, update.getUpdateObject());
+  private UpdateDefinition enforceTenancy(String collectionName, UpdateDefinition update) {
+    enforceTenancy(collectionName, update.getUpdateObject());
     return update;
   }
 
-  private Document setTenantIdRestriction(String collectionName, Document query) {
+  private <T> Collection<? extends T> enforceTenancy(Collection<? extends T> batchToSave) {
+    if (CollectionUtils.isEmpty(batchToSave)) {
+      return batchToSave;
+    }
+    batchToSave.forEach(this::enforceTenancy);
+    return batchToSave;
+  }
+
+  private Document enforceTenancy(String collectionName, Document document) {
     if (!TenantContextUtil.isTenancyEnabled(collectionName)) {
-      return query;
+      return document;
     }
 
     String tenantField = TenantContextUtil.getTenantField(collectionName);
     String tenantId = TenantContextUtil.getTenantId();
+    document.put(tenantField, tenantId);
 
-    query.put(tenantField, tenantId);
+    if (!TenantContextUtil.isAdditionalContextEnabled(collectionName)) {
+      return document;
+    }
 
-    return query;
+    String additionalContextField = TenantContextUtil.getAdditionalContextField(collectionName);
+    String additionalContextId = TenantContextUtil.getAdditionalContextId();
+    document.put(additionalContextField, additionalContextId);
+
+    return document;
   }
 
-  private <T> Query setTenantIdRestriction(Class<T> entityClass, Query query) {
-    if (!TenantIdHolder.class.isAssignableFrom(entityClass)) {
+  private <T> Query enforceTenancy(Class<T> entityClass, Query query) {
+    if (!AdditionalContextIdHolder.class.isAssignableFrom(entityClass)
+        && !TenantIdHolder.class.isAssignableFrom(entityClass)) {
       return query;
     }
-    return setTenantIdRestriction(this.getCollectionName(entityClass), query);
+    return enforceTenancy(this.getCollectionName(entityClass), query);
   }
 
-  private Query setTenantIdRestriction(String collectionName, Query query) {
+  private Query enforceTenancy(String collectionName, Query query) {
     if (!TenantContextUtil.isTenancyEnabled(collectionName)) {
       return query;
     }
     String tenantField = TenantContextUtil.getTenantField(collectionName);
     String tenantId = TenantContextUtil.getTenantId();
-    return addTenantIdToQuery(query, tenantField, tenantId);
+    Query updatedQuery = addConditionToQuery(query, tenantField, tenantId);
+
+    if (!TenantContextUtil.isAdditionalContextEnabled(collectionName)) {
+      return updatedQuery;
+    }
+
+    String additionalContextField = TenantContextUtil.getAdditionalContextField(collectionName);
+    String additionalContextId = TenantContextUtil.getAdditionalContextId();
+    return addConditionToQuery(updatedQuery, additionalContextField, additionalContextId);
   }
 
-  private Query addTenantIdToQuery(Query query, String tenantField, String tenantId) {
-    return query.addCriteria(Criteria.where(tenantField).is(tenantId));
-  }
+  private <T> T enforceTenancy(T objectToSave) {
+    Objects.requireNonNull(objectToSave);
 
-  private <T> T setTenantIdRestriction(T objectToSave) {
-    if (objectToSave == null || !TenantIdHolder.class.isAssignableFrom(objectToSave.getClass())) {
+    if (!TenantIdHolder.class.isAssignableFrom(objectToSave.getClass())) {
       return objectToSave;
     }
 
     Consumer<String> tenantIdSetterMethod = ((TenantIdHolder) objectToSave).getTenantIdSetterMethod();
-
     if (tenantIdSetterMethod == null) {
       throw new TenantEnforcementException(
           "Tenant id setter method should not be empty " + objectToSave.getClass());
     }
-
     tenantIdSetterMethod.accept(TenantContextUtil.getTenantId());
+
+    if (!AdditionalContextIdHolder.class.isAssignableFrom(objectToSave.getClass())) {
+      return objectToSave;
+    }
+
+    Consumer<String> additionalContextIdSetterMethod
+        = ((AdditionalContextIdHolder) objectToSave).getAdditionalContextIdSetterMethod();
+    if (additionalContextIdSetterMethod == null) {
+      throw new TenantEnforcementException(
+          "Additional context id setter method should not be empty " + objectToSave.getClass());
+    }
+    additionalContextIdSetterMethod.accept(TenantContextUtil.getAdditionalContextId());
 
     return objectToSave;
   }
 
-  private <T> Collection<? extends T> setTenantIdRestriction(Collection<? extends T> batchToSave) {
-    if (CollectionUtils.isEmpty(batchToSave)) {
-      return batchToSave;
-    }
-    batchToSave.forEach(this::setTenantIdRestriction);
-    return batchToSave;
-  }
 
+  private Query addConditionToQuery(Query query, String field, String value) {
+    return query.addCriteria(Criteria.where(field).is(value));
+  }
 }
